@@ -5,10 +5,12 @@ import { expect, test } from '@playwright/test'
 test('browse the feed and scale a seeded recipe', async ({ page }) => {
   await page.goto('/recipes')
   await expect(
-    page.getByRole('heading', { name: 'Recipes', exact: true }),
+    page.getByRole('heading', { name: 'Explore', exact: true }),
   ).toBeVisible()
 
-  const card = page.getByRole('link', { name: /Grandma Ruth's Æbleskiver/ })
+  const card = page
+    .getByRole('link', { name: /Grandma Ruth's Æbleskiver/ })
+    .first()
   await expect(card).toBeVisible()
 
   // Cover images are served by the uploads route.
@@ -19,8 +21,9 @@ test('browse the feed and scale a seeded recipe', async ({ page }) => {
   expect(image.headers()['content-type']).toContain('image/')
 
   await card.click()
+  await page.waitForURL(/\/recipes\/[a-z0-9]+$/)
   await expect(
-    page.getByRole('heading', { name: "Grandma Ruth's Æbleskiver" }),
+    page.getByRole('heading', { name: "Grandma Ruth's Æbleskiver", level: 1 }),
   ).toBeVisible()
   await expect(page.getByText('The story')).toBeVisible()
 

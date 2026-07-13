@@ -164,11 +164,11 @@ _Goal: the moat. This is what no other app has._
 
 _Goal: it's not just social — it's the best app to actually cook from._
 
-- [ ] Search: recipes by title, ingredient ("what can I make with leeks?"), tag, cuisine, author
-- [ ] Explore page: trending, seasonal, cuisine browsing (the Instagram Explore grid)
-- [ ] **Cook Mode**: full-screen step-by-step, huge type, screen stays awake, built-in timers per step, voice "next step"
-- [ ] Shopping list: add any recipe's ingredients (auto-scaled, auto-merged across recipes), check off at the store
-- [ ] Ratings via "Made It" (star + photo required = trustworthy ratings)
+- [x] Search: one box spans titles, descriptions, ingredients ("what can I make with leeks?"), tags, cuisines, and authors
+- [x] Explore page at `/recipes`: 🔥 Trending (most-liked), cuisine and tag filter chips, search results view
+- [x] **Cook Mode** at `/recipes/[id]/cook`: full-screen step-by-step, huge type, screen wake-lock, per-step timers auto-detected from step text, keyboard navigation (voice "next step" still to do)
+- [x] Shopping list: add any recipe's ingredients (scaled to servings, auto-merged by item+unit across recipes), check off at the store, clear checked
+- [x] Ratings via "Made It" shown on recipes (★ average + count badge)
 
 ### Phase 5 — The magic (AI) (2–3 weeks)
 

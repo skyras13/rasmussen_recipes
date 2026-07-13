@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import AddToListButton from '@/components/AddToListButton'
 import { CommentForm, CommentItem } from '@/components/Comments'
 import IngredientList from '@/components/IngredientList'
 import MadeItForm from '@/components/MadeItForm'
@@ -96,6 +97,17 @@ export default async function RecipePage({ params }: Params) {
     note: ingredient.note,
   }))
 
+  const ratings = recipe.madeIts
+    .map((madeIt) => madeIt.rating)
+    .filter((rating): rating is number => rating !== null)
+  const avgRating =
+    ratings.length > 0
+      ? Math.round(
+          (ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length) *
+            10,
+        ) / 10
+      : null
+
   const comments = recipe.comments.map((comment) => ({
     id: comment.id,
     text: comment.text,
@@ -168,6 +180,11 @@ export default async function RecipePage({ params }: Params) {
           <p className='mt-3 text-lg'>{recipe.description}</p>
         )}
         <div className='flex flex-wrap gap-2 mt-4'>
+          {avgRating !== null && (
+            <span className='badge badge-warning gap-1'>
+              ★ {avgRating} · {ratings.length} made it
+            </span>
+          )}
           {totalMin > 0 && (
             <span className='badge badge-outline'>{totalMin} min total</span>
           )}
@@ -193,26 +210,38 @@ export default async function RecipePage({ params }: Params) {
             </span>
           ))}
         </div>
-        {userId && (
-          <div className='flex flex-wrap items-center gap-2 mt-4'>
-            <LikeButton
-              recipeId={recipe.id}
-              initialLiked={recipe.likes.length > 0}
-              initialCount={recipe._count.likes}
-            />
-            <SaveButton
-              recipeId={recipe.id}
-              initialSaved={recipe.saves.length > 0}
-            />
-            <Link
-              href={`/recipes/new?fork=${recipe.id}`}
-              className='btn btn-ghost btn-sm'
-            >
-              🍴 Remix
-            </Link>
-            <MadeItForm recipeId={recipe.id} />
-          </div>
-        )}
+        <div className='flex flex-wrap items-center gap-2 mt-4'>
+          <Link
+            href={`/recipes/${recipe.id}/cook`}
+            className='btn btn-primary btn-sm'
+          >
+            👨‍🍳 Cook Mode
+          </Link>
+          {userId && (
+            <>
+              <LikeButton
+                recipeId={recipe.id}
+                initialLiked={recipe.likes.length > 0}
+                initialCount={recipe._count.likes}
+              />
+              <SaveButton
+                recipeId={recipe.id}
+                initialSaved={recipe.saves.length > 0}
+              />
+              <AddToListButton
+                recipeId={recipe.id}
+                servings={recipe.servings}
+              />
+              <Link
+                href={`/recipes/new?fork=${recipe.id}`}
+                className='btn btn-ghost btn-sm'
+              >
+                🍴 Remix
+              </Link>
+              <MadeItForm recipeId={recipe.id} />
+            </>
+          )}
+        </div>
       </header>
 
       {recipe.audioUrl && (

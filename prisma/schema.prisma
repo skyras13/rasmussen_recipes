@@ -63,6 +63,7 @@ model User {
   followers       Follow[]       @relation("Followee")
   notifications   Notification[] @relation("NotificationRecipient")
   notificationsBy Notification[] @relation("NotificationActor")
+  shoppingItems   ShoppingListItem[]
 }
 
 model Family {
@@ -261,6 +262,23 @@ model MadeIt {
 
   @@index([recipeId])
   @@index([userId])
+}
+
+model ShoppingListItem {
+  id       String   @id @default(cuid())
+  userId   String
+  // Where the item came from, for "from Æbleskiver" context. Kept loose —
+  // deleting the recipe keeps the list intact.
+  recipeTitle String?
+  quantity Decimal?
+  unit     String?
+  item     String
+  checked  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, checked])
 }
 
 model Notification {
