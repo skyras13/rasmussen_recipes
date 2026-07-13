@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 const envSchema = z.object({
   DATABASE_URL: z.string().url(),
+  UPLOAD_DIR: z.string().default('./uploads'),
   NODE_ENV: z
     .enum(['development', 'test', 'production'])
     .default('development'),

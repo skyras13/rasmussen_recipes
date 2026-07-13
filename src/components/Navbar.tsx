@@ -1,8 +1,13 @@
 import Link from 'next/link'
+import { auth } from '@/lib/auth'
+import { logout } from '@/app/actions/auth'
 
-export default function Navbar() {
+export default async function Navbar() {
+  const session = await auth()
+  const user = session?.user
+
   return (
-    <nav className='navbar bg-base-100'>
+    <nav className='navbar bg-base-100 shadow-sm'>
       <div className='navbar-start'>
         <div className='dropdown'>
           <div tabIndex={0} role='button' className='btn btn-ghost lg:hidden'>
@@ -31,22 +36,77 @@ export default function Navbar() {
             <li>
               <Link href='/families'>Families</Link>
             </li>
-            <li>
-              <Link href='/user-profile'>Profile</Link>
-            </li>
+            {user && (
+              <li>
+                <Link href='/user-profile'>Profile</Link>
+              </li>
+            )}
           </ul>
         </div>
         <Link href='/' className='btn btn-ghost text-xl'>
           FamilyRecipes
         </Link>
+        <div className='hidden lg:flex'>
+          <ul className='menu menu-horizontal px-1'>
+            <li>
+              <Link href='/recipes'>Recipes</Link>
+            </li>
+            <li>
+              <Link href='/families'>Families</Link>
+            </li>
+          </ul>
+        </div>
       </div>
-      <div className='navbar-end'>
-        <Link href='/login' className='btn btn-ghost'>
-          Login
-        </Link>
-        <Link href='/signup' className='btn btn-primary'>
-          Sign Up
-        </Link>
+      <div className='navbar-end gap-2'>
+        {user ? (
+          <>
+            <Link href='/recipes/new' className='btn btn-primary btn-sm'>
+              + New recipe
+            </Link>
+            <div className='dropdown dropdown-end'>
+              <div
+                tabIndex={0}
+                role='button'
+                className='btn btn-ghost btn-circle avatar avatar-placeholder'
+              >
+                {user.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={user.image}
+                    alt={user.name ?? 'You'}
+                    className='w-10 rounded-full'
+                  />
+                ) : (
+                  <div className='bg-primary text-primary-content w-10 rounded-full'>
+                    <span>{(user.name ?? '?').slice(0, 1).toUpperCase()}</span>
+                  </div>
+                )}
+              </div>
+              <ul
+                tabIndex={0}
+                className='menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52'
+              >
+                <li>
+                  <Link href='/user-profile'>Profile</Link>
+                </li>
+                <li>
+                  <form action={logout}>
+                    <button type='submit'>Sign out</button>
+                  </form>
+                </li>
+              </ul>
+            </div>
+          </>
+        ) : (
+          <>
+            <Link href='/login' className='btn btn-ghost'>
+              Login
+            </Link>
+            <Link href='/signup' className='btn btn-primary'>
+              Sign Up
+            </Link>
+          </>
+        )}
       </div>
     </nav>
   )

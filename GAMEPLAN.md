@@ -123,12 +123,13 @@ _Goal: a codebase you can build fast on._
 
 _Goal: one user can create, photograph, and cook from a real recipe._
 
-- [ ] Auth.js: email + Google sign-in; sessions; protected routes; real Login/Signup pages
-- [ ] Recipe CRUD with a multi-step create flow: photos → title/story → ingredients (structured editor) → steps → tags/visibility
-- [ ] Image upload with client-side crop (feed needs consistent 4:5 / 1:1 crops), CDN delivery, blur placeholders
-- [ ] Recipe detail page: hero image, story, ingredients with **serving scaler**, steps, print view
-- [ ] `/user-profile` becomes a real profile: avatar, bio, grid of your recipes (the "Instagram profile grid")
-- [ ] Seed script with ~30 gorgeous demo recipes so the app never looks empty
+- [x] Auth.js: email sign-in with sessions, protected routes, real Login/Signup pages (Google OAuth pending credentials)
+- [x] Recipe creation with structured editor: photos, title/story, ingredients, steps, tags, visibility (edit/delete still to do)
+- [x] Image upload with local storage served via `/api/uploads` (client-side crop + CDN delivery still to do)
+- [x] Recipe detail page: hero image, story, ingredients with **serving scaler**, steps (print view still to do)
+- [x] `/user-profile` shows a real profile: bio, stats, grid of your recipes with visibility badges (avatar upload still to do)
+- [x] Seed script with demo users, a family group, and 8 recipes with generated cover images
+- [x] Playwright e2e smoke suite (deferred from Phase 0): browse + scale, signup → create → profile, privacy check
 
 **Milestone: you can post the first real Rasmussen family recipe.**
 

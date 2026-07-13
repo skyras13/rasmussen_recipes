@@ -17,12 +17,16 @@ phased roadmap.
 ## Getting started
 
 ```bash
-cp .env.example .env       # configure DATABASE_URL
+cp .env.example .env       # set DATABASE_URL and AUTH_SECRET
 npm install                # also runs `prisma generate`
+npm run db:migrate         # apply migrations
+npm run db:seed            # optional: demo users, family, and recipes
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000). Seeded demo accounts:
+`sky@example.com`, `astrid@example.com`, `soren@example.com` — password
+`password123`.
 
 ### With Docker (app + Postgres)
 
@@ -47,7 +51,22 @@ npm run db:migrate
 | `npm test`           | Run the Vitest suite once            |
 | `npm run format`     | Format everything with Prettier      |
 | `npm run db:migrate` | Create/apply Prisma migrations       |
+| `npm run db:seed`    | Seed demo users and recipes          |
 | `npm run db:studio`  | Browse the database in Prisma Studio |
+
+## End-to-end tests
+
+Playwright drives the real app (signup, recipe creation, serving scaling)
+against a seeded database:
+
+```bash
+npm run db:seed
+npx playwright test
+```
+
+If your environment has a preinstalled Chromium that doesn't match the
+Playwright version, point at it with
+`PLAYWRIGHT_CHROMIUM_PATH=/path/to/chrome npx playwright test`.
 
 ## Production image
 
