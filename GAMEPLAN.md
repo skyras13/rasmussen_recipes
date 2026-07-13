@@ -137,12 +137,12 @@ _Goal: one user can create, photograph, and cook from a real recipe._
 
 _Goal: it feels like Instagram._
 
-- [ ] The Feed at `/` (when logged in): infinite scroll, cursor-paginated, photo-first cards (cover image, title, author, time, like/comment/save row)
-- [ ] Likes (optimistic, double-tap on photo ❤️), threaded comments, saves + collections
-- [ ] Follow system + follower/following counts; feed = followed users ∪ your families
-- [ ] **"I Made It"** posts — the killer engagement loop: cook it, snap your result, it appears on the recipe and in the feed
-- [ ] Notifications (in-app first): likes, comments, follows, made-its
-- [ ] Share links with Open Graph images (auto-generated recipe cards for iMessage/social previews)
+- [x] The Feed at `/` (when logged in): infinite scroll, cursor-paginated, photo-first cards (cover image, title, author, time, like/comment row)
+- [x] Likes (optimistic, double-tap on photo ❤️), comments with delete, saves + `/saved` page (comment threading + collections UI still to do)
+- [x] Follow system + follower/following counts + public profiles at `/u/[username]`; feed = followed users ∪ family peers
+- [x] **"I Made It"** posts with photo/rating/notes shown on the recipe page (feed interleaving still to do)
+- [x] Notifications: in-app bell with unread badge, `/notifications` page, mark-all-read; fired on likes, comments, follows, made-its
+- [x] Share links with Open Graph metadata using the cover photo (auto-generated OG card images still to do)
 
 **Milestone: two people can follow each other and interact daily.**
 

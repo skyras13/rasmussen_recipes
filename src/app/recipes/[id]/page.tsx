@@ -1,40 +1,44 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { CommentForm, CommentItem } from '@/components/Comments'
 import IngredientList from '@/components/IngredientList'
+import MadeItForm from '@/components/MadeItForm'
+import { LikeButton, SaveButton } from '@/components/SocialButtons'
 import { currentUserId } from '@/lib/auth'
+import { canViewRecipe } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
+import { timeAgo } from '@/lib/time'
 
-async function canView(
-  recipe: { visibility: string; authorId: string; familyId: string | null },
-  userId: string | null,
-): Promise<boolean> {
-  if (recipe.visibility === 'PUBLIC') return true
-  if (!userId) return false
-  if (recipe.authorId === userId) return true
-  if (recipe.visibility === 'PRIVATE') return false
+type Params = { params: Promise<{ id: string }> }
 
-  // FAMILY: visible to members of the recipe's family, or (when no family
-  // is set) anyone who shares a family group with the author.
-  if (recipe.familyId) {
-    const membership = await prisma.familyMember.findUnique({
-      where: { userId_familyId: { userId, familyId: recipe.familyId } },
-    })
-    return membership !== null
-  }
-  const shared = await prisma.familyMember.findFirst({
-    where: {
-      userId,
-      family: { members: { some: { userId: recipe.authorId } } },
+export async function generateMetadata({ params }: Params): Promise<Metadata> {
+  const { id } = await params
+  const recipe = await prisma.recipe.findUnique({
+    where: { id },
+    select: {
+      title: true,
+      description: true,
+      visibility: true,
+      images: { where: { isCover: true }, take: 1, select: { url: true } },
     },
   })
-  return shared !== null
+  // Only public recipes advertise themselves in link previews.
+  if (!recipe || recipe.visibility !== 'PUBLIC') {
+    return { title: 'Family Recipes' }
+  }
+  return {
+    title: `${recipe.title} — Family Recipes`,
+    description: recipe.description ?? 'A recipe on Family Recipes',
+    openGraph: {
+      title: recipe.title,
+      description: recipe.description ?? undefined,
+      images: recipe.images[0] ? [{ url: recipe.images[0].url }] : undefined,
+    },
+  }
 }
 
-export default async function RecipePage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
+export default async function RecipePage({ params }: Params) {
   const { id } = await params
   const userId = await currentUserId()
 
@@ -45,9 +49,24 @@ export default async function RecipePage({
       ingredients: { orderBy: { sortOrder: 'asc' } },
       steps: { orderBy: { sortOrder: 'asc' } },
       images: { orderBy: [{ isCover: 'desc' }, { createdAt: 'asc' }] },
+      comments: {
+        orderBy: { createdAt: 'asc' },
+        include: { user: { select: { name: true, username: true } } },
+      },
+      madeIts: {
+        orderBy: { createdAt: 'desc' },
+        include: { user: { select: { name: true, username: true } } },
+      },
+      likes: userId
+        ? { where: { userId }, select: { userId: true } }
+        : { take: 0 },
+      saves: userId
+        ? { where: { userId }, select: { userId: true } }
+        : { take: 0 },
+      _count: { select: { likes: true } },
     },
   })
-  if (!recipe || !(await canView(recipe, userId))) notFound()
+  if (!recipe || !(await canViewRecipe(recipe, userId))) notFound()
 
   const cover = recipe.images[0]
   const totalMin = (recipe.prepMin ?? 0) + (recipe.cookMin ?? 0)
@@ -59,6 +78,14 @@ export default async function RecipePage({
     unit: ingredient.unit,
     item: ingredient.item,
     note: ingredient.note,
+  }))
+
+  const comments = recipe.comments.map((comment) => ({
+    id: comment.id,
+    text: comment.text,
+    createdAt: comment.createdAt.toISOString(),
+    author: { name: comment.user.name, username: comment.user.username },
+    mine: comment.userId === userId,
   }))
 
   return (
@@ -83,9 +110,12 @@ export default async function RecipePage({
         </div>
         <p className='text-base-content/70'>
           by{' '}
-          <span className='font-medium'>
+          <Link
+            href={`/u/${recipe.author.username}`}
+            className='font-medium hover:underline'
+          >
             {recipe.author.name} (@{recipe.author.username})
-          </span>
+          </Link>
         </p>
         {recipe.description && (
           <p className='mt-3 text-lg'>{recipe.description}</p>
@@ -116,6 +146,20 @@ export default async function RecipePage({
             </span>
           ))}
         </div>
+        {userId && (
+          <div className='flex items-center gap-2 mt-4'>
+            <LikeButton
+              recipeId={recipe.id}
+              initialLiked={recipe.likes.length > 0}
+              initialCount={recipe._count.likes}
+            />
+            <SaveButton
+              recipeId={recipe.id}
+              initialSaved={recipe.saves.length > 0}
+            />
+            <MadeItForm recipeId={recipe.id} />
+          </div>
+        )}
       </header>
 
       {recipe.story && (
@@ -164,6 +208,72 @@ export default async function RecipePage({
           </div>
         </section>
       )}
+
+      {recipe.madeIts.length > 0 && (
+        <section className='mt-10'>
+          <h2 className='text-xl font-semibold mb-4'>
+            Made it ({recipe.madeIts.length})
+          </h2>
+          <ul className='space-y-4'>
+            {recipe.madeIts.map((madeIt) => (
+              <li key={madeIt.id} className='flex gap-3'>
+                {madeIt.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={madeIt.imageUrl}
+                    alt={`Made by ${madeIt.user.name}`}
+                    className='w-20 h-20 object-cover rounded-box'
+                  />
+                )}
+                <div>
+                  <p className='text-sm'>
+                    <Link
+                      href={`/u/${madeIt.user.username}`}
+                      className='font-medium hover:underline'
+                    >
+                      {madeIt.user.name}
+                    </Link>{' '}
+                    {madeIt.rating && (
+                      <span className='text-warning'>
+                        {'★'.repeat(madeIt.rating)}
+                      </span>
+                    )}{' '}
+                    <span className='text-base-content/50'>
+                      · {timeAgo(madeIt.createdAt)}
+                    </span>
+                  </p>
+                  {madeIt.notes && (
+                    <p className='whitespace-pre-line'>{madeIt.notes}</p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section id='comments' className='mt-10 max-w-2xl'>
+        <h2 className='text-xl font-semibold mb-4'>
+          Comments ({comments.length})
+        </h2>
+        {comments.length > 0 && (
+          <ul className='space-y-4 mb-4'>
+            {comments.map((comment) => (
+              <CommentItem key={comment.id} comment={comment} />
+            ))}
+          </ul>
+        )}
+        {userId ? (
+          <CommentForm recipeId={recipe.id} />
+        ) : (
+          <p className='text-sm text-base-content/60'>
+            <Link href='/login' className='link link-primary'>
+              Log in
+            </Link>{' '}
+            to join the conversation.
+          </p>
+        )}
+      </section>
 
       <div className='mt-10'>
         <Link href='/recipes' className='btn btn-ghost'>

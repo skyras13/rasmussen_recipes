@@ -369,12 +369,13 @@ async function main() {
   })
 
   const authors = { sky, astrid, soren }
+  const createdRecipes: Array<{ id: string; authorId: string }> = []
   let imageIndex = 0
   for (const [key, recipes] of Object.entries(RECIPES)) {
     const author = authors[key as keyof typeof authors]
     for (const recipe of recipes) {
       const url = await coverImage(imageIndex++)
-      await prisma.recipe.create({
+      const created = await prisma.recipe.create({
         data: {
           authorId: author.id,
           familyId:
@@ -411,12 +412,51 @@ async function main() {
           images: { create: [{ url, isCover: true }] },
         },
       })
+      createdRecipes.push({ id: created.id, authorId: created.authorId })
     }
   }
 
+  // A little social life so the feed demos well: everyone follows each
+  // other, and public recipes get some likes and comments.
+  const users = [sky, astrid, soren]
+  await prisma.follow.createMany({
+    data: users.flatMap((follower) =>
+      users
+        .filter((followee) => followee.id !== follower.id)
+        .map((followee) => ({
+          followerId: follower.id,
+          followeeId: followee.id,
+        })),
+    ),
+  })
+
+  await prisma.like.createMany({
+    data: createdRecipes.flatMap((recipe) =>
+      users
+        .filter((user) => user.id !== recipe.authorId)
+        .map((user) => ({ userId: user.id, recipeId: recipe.id })),
+    ),
+  })
+
+  const aebleskiver = createdRecipes[0]
+  await prisma.comment.createMany({
+    data: [
+      {
+        userId: astrid.id,
+        recipeId: aebleskiver.id,
+        text: 'The knitting needle trick is real — nothing else turns them as cleanly.',
+      },
+      {
+        userId: soren.id,
+        recipeId: aebleskiver.id,
+        text: 'Made these last Sunday. Gone in eleven minutes flat.',
+      },
+    ],
+  })
+
   const total = await prisma.recipe.count()
   console.log(
-    `Seeded 3 users (password: ${PASSWORD}), 1 family, ${total} recipes.`,
+    `Seeded 3 users (password: ${PASSWORD}), 1 family, ${total} recipes, follows/likes/comments.`,
   )
 }
 

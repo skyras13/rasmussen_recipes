@@ -1,10 +1,17 @@
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { logout } from '@/app/actions/auth'
+import { prisma } from '@/lib/prisma'
 
 export default async function Navbar() {
   const session = await auth()
   const user = session?.user
+
+  const unread = user
+    ? await prisma.notification.count({
+        where: { recipientId: user.id, readAt: null },
+      })
+    : 0
 
   return (
     <nav className='navbar bg-base-100 shadow-sm'>
@@ -63,6 +70,20 @@ export default async function Navbar() {
             <Link href='/recipes/new' className='btn btn-primary btn-sm'>
               + New recipe
             </Link>
+            <Link
+              href='/notifications'
+              aria-label={`Notifications${unread > 0 ? ` (${unread} unread)` : ''}`}
+              className='btn btn-ghost btn-circle'
+            >
+              <div className='indicator'>
+                <span className='text-xl'>🔔</span>
+                {unread > 0 && (
+                  <span className='badge badge-error badge-xs indicator-item'>
+                    {unread > 9 ? '9+' : unread}
+                  </span>
+                )}
+              </div>
+            </Link>
             <div className='dropdown dropdown-end'>
               <div
                 tabIndex={0}
@@ -88,6 +109,12 @@ export default async function Navbar() {
               >
                 <li>
                   <Link href='/user-profile'>Profile</Link>
+                </li>
+                <li>
+                  <Link href='/saved'>Saved</Link>
+                </li>
+                <li>
+                  <Link href='/notifications'>Notifications</Link>
                 </li>
                 <li>
                   <form action={logout}>
