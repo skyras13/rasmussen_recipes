@@ -1,0 +1,275 @@
+// Rasmussen Recipes data model
+//
+// Core ideas baked into the schema:
+// - Ingredients and steps are structured rows, never text blobs, so
+//   serving scaling, shopping lists, and AI extraction stay possible.
+// - Every recipe carries a visibility level (PUBLIC / FAMILY / PRIVATE)
+//   because family heirlooms are the heart of the product.
+// - forkedFromId gives recipes a lineage ("remixed from Mom's version").
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Visibility {
+  PUBLIC
+  FAMILY
+  PRIVATE
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum FamilyRole {
+  ADMIN
+  MEMBER
+}
+
+enum NotificationType {
+  LIKE
+  COMMENT
+  FOLLOW
+  FAMILY_INVITE
+  MADE_IT
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String?
+  name         String
+  username     String   @unique
+  bio          String?
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  recipes         Recipe[]
+  familyMembers   FamilyMember[]
+  likes           Like[]
+  comments        Comment[]
+  saves           Save[]
+  collections     Collection[]
+  madeIts         MadeIt[]
+  following       Follow[]       @relation("Follower")
+  followers       Follow[]       @relation("Followee")
+  notifications   Notification[] @relation("NotificationRecipient")
+  notificationsBy Notification[] @relation("NotificationActor")
+}
+
+model Family {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  about     String?
+  coverUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members FamilyMember[]
+  recipes Recipe[]
+}
+
+model FamilyMember {
+  id       String     @id @default(cuid())
+  userId   String
+  familyId String
+  role     FamilyRole @default(MEMBER)
+  joinedAt DateTime   @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, familyId])
+  @@index([familyId])
+}
+
+model Recipe {
+  id          String     @id @default(cuid())
+  authorId    String
+  familyId    String?
+  title       String
+  description String?
+  // The heritage fields: where this recipe comes from and why it matters.
+  story          String?
+  originalAuthor String?
+  originEra      String?
+  originPlace    String?
+  servings   Int        @default(4)
+  prepMin    Int?
+  cookMin    Int?
+  difficulty Difficulty @default(MEDIUM)
+  cuisine    String?
+  tags       String[]   @default([])
+  visibility Visibility @default(PRIVATE)
+  publishedAt  DateTime?
+  forkedFromId String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  author     User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  family     Family?       @relation(fields: [familyId], references: [id], onDelete: SetNull)
+  forkedFrom Recipe?       @relation("RecipeLineage", fields: [forkedFromId], references: [id], onDelete: SetNull)
+  forks      Recipe[]      @relation("RecipeLineage")
+  ingredients Ingredient[]
+  steps       Step[]
+  images      RecipeImage[]
+  likes       Like[]
+  comments    Comment[]
+  saves       Save[]
+  madeIts     MadeIt[]
+
+  @@index([authorId])
+  @@index([familyId])
+  @@index([visibility, publishedAt])
+}
+
+model Ingredient {
+  id        String  @id @default(cuid())
+  recipeId  String
+  quantity  Decimal?
+  unit      String?
+  item      String
+  note      String?
+  sortOrder Int
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId])
+}
+
+model Step {
+  id           String  @id @default(cuid())
+  recipeId     String
+  text         String
+  imageUrl     String?
+  timerSeconds Int?
+  sortOrder    Int
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId])
+}
+
+model RecipeImage {
+  id       String  @id @default(cuid())
+  recipeId String
+  url      String
+  width    Int?
+  height   Int?
+  isCover  Boolean @default(false)
+  // Set when the image is a scan of an original handwritten card.
+  isOriginalCard Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId])
+}
+
+model Like {
+  userId    String
+  recipeId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@id([userId, recipeId])
+  @@index([recipeId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  userId    String
+  recipeId  String
+  parentId  String?
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe  Recipe    @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  parent  Comment?  @relation("CommentThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies Comment[] @relation("CommentThread")
+
+  @@index([recipeId])
+}
+
+model Collection {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  saves Save[]
+
+  @@unique([userId, name])
+}
+
+model Save {
+  userId       String
+  recipeId     String
+  collectionId String?
+  createdAt    DateTime @default(now())
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe     Recipe      @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  collection Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+
+  @@id([userId, recipeId])
+  @@index([recipeId])
+  @@index([collectionId])
+}
+
+model Follow {
+  followerId String
+  followeeId String
+  createdAt  DateTime @default(now())
+
+  follower User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followee User @relation("Followee", fields: [followeeId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followeeId])
+  @@index([followeeId])
+}
+
+model MadeIt {
+  id        String   @id @default(cuid())
+  userId    String
+  recipeId  String
+  imageUrl  String?
+  rating    Int?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId])
+  @@index([userId])
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  recipientId String
+  actorId     String
+  type        NotificationType
+  recipeId    String?
+  readAt      DateTime?
+  createdAt   DateTime         @default(now())
+
+  recipient User @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actor     User @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, readAt])
+}

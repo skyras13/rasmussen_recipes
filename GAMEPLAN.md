@@ -1,6 +1,6 @@
 # Rasmussen Recipes — Analysis & Game Plan
 
-**Vision:** A social, Instagram-style recipe app — a beautiful scrolling feed of recipe photos and videos, where every post is also a fully structured, cookable recipe. The twist that makes it special: it's built around *family* — preserving heritage recipes, the stories behind them, and the people who passed them down.
+**Vision:** A social, Instagram-style recipe app — a beautiful scrolling feed of recipe photos and videos, where every post is also a fully structured, cookable recipe. The twist that makes it special: it's built around _family_ — preserving heritage recipes, the stories behind them, and the people who passed them down.
 
 ---
 
@@ -10,14 +10,14 @@
 
 The project is a clean, early-stage scaffold — roughly "day one" of a Next.js app:
 
-| Area | Status |
-|---|---|
-| Framework | Next.js 15 (App Router) + React 19 RC + TypeScript |
-| Styling | Tailwind CSS 3 + DaisyUI (light/dark themes configured) |
-| Pages | Home hero, `/recipes`, `/families`, `/login`, `/signup`, `/user-profile` |
-| Layout | Shared `Navbar` (responsive, with mobile dropdown) + `Footer` |
-| Infra | Dockerfile + docker-compose for local dev |
-| Build | ✅ Production build passes; all routes prerender statically |
+| Area      | Status                                                                   |
+| --------- | ------------------------------------------------------------------------ |
+| Framework | Next.js 15 (App Router) + React 19 RC + TypeScript                       |
+| Styling   | Tailwind CSS 3 + DaisyUI (light/dark themes configured)                  |
+| Pages     | Home hero, `/recipes`, `/families`, `/login`, `/signup`, `/user-profile` |
+| Layout    | Shared `Navbar` (responsive, with mobile dropdown) + `Footer`            |
+| Infra     | Dockerfile + docker-compose for local dev                                |
+| Build     | ✅ Production build passes; all routes prerender statically              |
 
 The page structure already hints at the right product shape: recipes, family groups, profiles, and auth are exactly the right first four nouns.
 
@@ -48,7 +48,7 @@ Every page body is an empty comment (`{/* Recipe content will go here */}`). Con
 
 Instagram made photos social. This app makes **cooking** social. The core insight that differentiates it from AllRecipes (database-first) and Instagram (photo-first):
 
-> **Every post is both beautiful AND cookable.** A post is a photo/video *plus* structured ingredients, steps, timing, and servings — so anything you see in the feed, you can cook tonight.
+> **Every post is both beautiful AND cookable.** A post is a photo/video _plus_ structured ingredients, steps, timing, and servings — so anything you see in the feed, you can cook tonight.
 
 And the family angle is the moat: nobody scrolls Instagram to find Grandma's æbleskiver recipe, and nobody opens AllRecipes to feel connected to their family. This app does both.
 
@@ -66,18 +66,18 @@ And the family angle is the moat: nobody scrolls Instagram to find Grandma's æb
 
 ### Recommended stack (builds on what's already here)
 
-| Layer | Choice | Why |
-|---|---|---|
-| Framework | Next.js 15+ App Router (keep) | Already in place; server components are perfect for feed rendering |
-| Database | **PostgreSQL + Prisma** | Relational fits the social graph; Prisma gives type-safe queries end-to-end. Host on Neon/Supabase for zero-ops. |
-| Auth | **Auth.js (NextAuth v5)** | Free, self-owned, email + Google/Apple OAuth; families need real accounts |
-| Images/video | **UploadThing or Cloudinary + `next/image`** | Upload, transform (thumbnails, feed crops), and CDN delivery in one service |
-| Data fetching | Server Components + Server Actions; **TanStack Query** on interactive surfaces (feed infinite-scroll, optimistic likes) | Minimal client JS, snappy interactions |
-| Validation | **Zod** | Shared schemas between forms, server actions, and AI extraction output |
-| Search | Postgres full-text first; Typesense/Meilisearch when needed | Don't over-build early |
-| AI | **Claude API** (recipe-card OCR → structured recipe, URL import, ingredient parsing) | Vision + structured output is exactly this use case |
-| Deploy | Vercel (app) + Neon (db) | Push-to-deploy; keep Docker for local parity |
-| Testing/CI | Vitest + Playwright + GitHub Actions | Catch regressions before they hit the family |
+| Layer         | Choice                                                                                                                  | Why                                                                                                              |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Framework     | Next.js 15+ App Router (keep)                                                                                           | Already in place; server components are perfect for feed rendering                                               |
+| Database      | **PostgreSQL + Prisma**                                                                                                 | Relational fits the social graph; Prisma gives type-safe queries end-to-end. Host on Neon/Supabase for zero-ops. |
+| Auth          | **Auth.js (NextAuth v5)**                                                                                               | Free, self-owned, email + Google/Apple OAuth; families need real accounts                                        |
+| Images/video  | **UploadThing or Cloudinary + `next/image`**                                                                            | Upload, transform (thumbnails, feed crops), and CDN delivery in one service                                      |
+| Data fetching | Server Components + Server Actions; **TanStack Query** on interactive surfaces (feed infinite-scroll, optimistic likes) | Minimal client JS, snappy interactions                                                                           |
+| Validation    | **Zod**                                                                                                                 | Shared schemas between forms, server actions, and AI extraction output                                           |
+| Search        | Postgres full-text first; Typesense/Meilisearch when needed                                                             | Don't over-build early                                                                                           |
+| AI            | **Claude API** (recipe-card OCR → structured recipe, URL import, ingredient parsing)                                    | Vision + structured output is exactly this use case                                                              |
+| Deploy        | Vercel (app) + Neon (db)                                                                                                | Push-to-deploy; keep Docker for local parity                                                                     |
+| Testing/CI    | Vitest + Playwright + GitHub Actions                                                                                    | Catch regressions before they hit the family                                                                     |
 
 ### Core data model
 
@@ -99,6 +99,7 @@ Notification (like, comment, follow, family-invite, made-it)
 ```
 
 Key decisions baked in:
+
 - **Ingredients and steps are structured rows, not a text blob** — this is what enables scaling servings, shopping lists, ingredient search, and AI features later. Non-negotiable from day one.
 - **Visibility on every recipe** (`public` / `family` / `private`) — the family-heirloom use case demands it, and it's brutal to retrofit.
 - **`forkedFromId`** — recipe lineage is the single most "incredible" social mechanic for a family recipe app: see how Aunt Linda's chili diverged from Grandma's.
@@ -108,17 +109,19 @@ Key decisions baked in:
 ## Part 4: The Phased Roadmap
 
 ### Phase 0 — Foundations (1–2 weeks of effort)
-*Goal: a codebase you can build fast on.*
 
-- [ ] Upgrade React 19 RC → stable; align `@types/react*` to v19; DaisyUI 4 → 5
-- [ ] Node 22 base image; multi-stage production Dockerfile (`output: 'standalone'`)
-- [ ] Add Postgres to docker-compose; set up Prisma with the full schema above
-- [ ] `.env.example` + environment validation (Zod)
-- [ ] GitHub Actions CI: lint, typecheck, build, test on every PR
-- [ ] Vitest + one smoke Playwright test; Prettier config committed
+_Goal: a codebase you can build fast on._
+
+- [x] Upgrade React 19 RC → stable; align `@types/react*` to v19; DaisyUI 4 → 5 (with Tailwind 3 → 4)
+- [x] Node 22 base image; multi-stage production Dockerfile (`output: 'standalone'`)
+- [x] Add Postgres to docker-compose; set up Prisma with the full schema above
+- [x] `.env.example` + environment validation (Zod)
+- [x] GitHub Actions CI: lint, typecheck, build, test on every PR
+- [x] Vitest + component/unit tests; Prettier config committed (Playwright smoke test deferred to Phase 1, once there are real flows to drive)
 
 ### Phase 1 — Recipes exist (2–3 weeks)
-*Goal: one user can create, photograph, and cook from a real recipe.*
+
+_Goal: one user can create, photograph, and cook from a real recipe._
 
 - [ ] Auth.js: email + Google sign-in; sessions; protected routes; real Login/Signup pages
 - [ ] Recipe CRUD with a multi-step create flow: photos → title/story → ingredients (structured editor) → steps → tags/visibility
@@ -130,7 +133,8 @@ Key decisions baked in:
 **Milestone: you can post the first real Rasmussen family recipe.**
 
 ### Phase 2 — The social feed (2–3 weeks)
-*Goal: it feels like Instagram.*
+
+_Goal: it feels like Instagram._
 
 - [ ] The Feed at `/` (when logged in): infinite scroll, cursor-paginated, photo-first cards (cover image, title, author, time, like/comment/save row)
 - [ ] Likes (optimistic, double-tap on photo ❤️), threaded comments, saves + collections
@@ -142,7 +146,8 @@ Key decisions baked in:
 **Milestone: two people can follow each other and interact daily.**
 
 ### Phase 3 — Families & heritage (2 weeks)
-*Goal: the moat. This is what no other app has.*
+
+_Goal: the moat. This is what no other app has._
 
 - [ ] Family groups: create, invite via link/email, member roles (admin/member)
 - [ ] Family cookbook page: the family's collected recipes, filterable by member, holiday, era
@@ -155,7 +160,8 @@ Key decisions baked in:
 **Milestone: the whole extended family joins and uploads the heirloom recipes.**
 
 ### Phase 4 — Discovery & cooking experience (2–3 weeks)
-*Goal: it's not just social — it's the best app to actually cook from.*
+
+_Goal: it's not just social — it's the best app to actually cook from._
 
 - [ ] Search: recipes by title, ingredient ("what can I make with leeks?"), tag, cuisine, author
 - [ ] Explore page: trending, seasonal, cuisine browsing (the Instagram Explore grid)
@@ -164,9 +170,10 @@ Key decisions baked in:
 - [ ] Ratings via "Made It" (star + photo required = trustworthy ratings)
 
 ### Phase 5 — The magic (AI) (2–3 weeks)
-*Goal: features that make people say "how did it do that?"*
 
-- [ ] **📸 Recipe card scanner**: photograph Grandma's handwritten index card → Claude vision extracts a fully structured recipe (with the original card image preserved on the recipe as an artifact). *This is the emotional killer feature for the family market.*
+_Goal: features that make people say "how did it do that?"_
+
+- [ ] **📸 Recipe card scanner**: photograph Grandma's handwritten index card → Claude vision extracts a fully structured recipe (with the original card image preserved on the recipe as an artifact). _This is the emotional killer feature for the family market._
 - [ ] **🔗 URL import**: paste any recipe link → parsed into structured format (schema.org/Recipe JSON-LD first, LLM fallback)
 - [ ] Smart ingredient parsing ("2 heaping cups AP flour, sifted" → qty/unit/item/note)
 - [ ] Natural-language search ("cozy fall dinner under 45 minutes")
@@ -188,8 +195,9 @@ Key decisions baked in:
 **Build order rationale:** Foundations → single-player value (a great recipe tool) → multiplayer value (feed) → moat (family) → delight (AI). Each phase ships something usable; the app is never broken-in-progress.
 
 **Three principles:**
+
 1. **Photo-first, always.** Every surface leads with imagery. If a recipe has no photo, the create flow makes adding one irresistible (and the card scanner means even old recipes get the original card as their image).
 2. **Structured data is sacred.** Never store ingredients/steps as text blobs. Every future feature — scaling, shopping lists, search, AI — depends on this.
-3. **The family is the moat.** Instagram has more photos; AllRecipes has more recipes. Nobody else has "your family's food history, alive and growing." Every roadmap decision should be tested against: *does this make the app more indispensable to a family?*
+3. **The family is the moat.** Instagram has more photos; AllRecipes has more recipes. Nobody else has "your family's food history, alive and growing." Every roadmap decision should be tested against: _does this make the app more indispensable to a family?_
 
 **Suggested immediate next step:** Phase 0 in one PR (upgrades + Prisma schema + CI), then Phase 1 auth. Say the word and I'll start executing.
