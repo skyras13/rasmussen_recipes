@@ -1,0 +1,195 @@
+# Rasmussen Recipes — Analysis & Game Plan
+
+**Vision:** A social, Instagram-style recipe app — a beautiful scrolling feed of recipe photos and videos, where every post is also a fully structured, cookable recipe. The twist that makes it special: it's built around *family* — preserving heritage recipes, the stories behind them, and the people who passed them down.
+
+---
+
+## Part 1: Where the App Stands Today
+
+### What exists
+
+The project is a clean, early-stage scaffold — roughly "day one" of a Next.js app:
+
+| Area | Status |
+|---|---|
+| Framework | Next.js 15 (App Router) + React 19 RC + TypeScript |
+| Styling | Tailwind CSS 3 + DaisyUI (light/dark themes configured) |
+| Pages | Home hero, `/recipes`, `/families`, `/login`, `/signup`, `/user-profile` |
+| Layout | Shared `Navbar` (responsive, with mobile dropdown) + `Footer` |
+| Infra | Dockerfile + docker-compose for local dev |
+| Build | ✅ Production build passes; all routes prerender statically |
+
+The page structure already hints at the right product shape: recipes, family groups, profiles, and auth are exactly the right first four nouns.
+
+### What's missing (everything is a placeholder)
+
+Every page body is an empty comment (`{/* Recipe content will go here */}`). Concretely, there is **no**:
+
+- **Database or data model** — no recipes, users, families, or posts exist anywhere
+- **Authentication** — Login/Signup are empty cards; no session handling
+- **API layer** — no route handlers, no server actions
+- **Image handling** — the core of an Instagram-style app; nothing for upload, storage, or optimized delivery
+- **Feed** — no posts, likes, comments, follows, or saves
+- **Search or discovery** of any kind
+- **Tests, CI, or deployment pipeline**
+
+### Technical debt to fix early (cheap now, expensive later)
+
+1. **React 19 RC pin** — `react@19.0.0-rc-02c0e824-20241028` is a dated release candidate; React 19 is long since stable. Also `@types/react` is pinned to v18, mismatching React 19.
+2. **Dockerfile runs `npm run dev`** — fine for local, but there's no production image (multi-stage build with `next build` + standalone output).
+3. **Node 18 base image** — Node 18 is end-of-life; move to Node 22 LTS.
+4. **No environment variable strategy** — needed the moment a database or storage bucket appears.
+5. **DaisyUI 4** — v5 is current; upgrade before building real UI on it, since v5 changed theme syntax.
+6. **`package.json` name typo** — `rasmussen_recipies` → `rasmussen_recipes` (cosmetic, but easy).
+
+---
+
+## Part 2: Product Vision — What "Most Incredible Recipe App Ever" Means
+
+Instagram made photos social. This app makes **cooking** social. The core insight that differentiates it from AllRecipes (database-first) and Instagram (photo-first):
+
+> **Every post is both beautiful AND cookable.** A post is a photo/video *plus* structured ingredients, steps, timing, and servings — so anything you see in the feed, you can cook tonight.
+
+And the family angle is the moat: nobody scrolls Instagram to find Grandma's æbleskiver recipe, and nobody opens AllRecipes to feel connected to their family. This app does both.
+
+### The five pillars
+
+1. **The Feed** — an infinite, gorgeous scroll of recipe cards (photo-forward, Instagram-style) from people and families you follow, plus a discovery feed.
+2. **The Recipe** — structured, interactive recipes: scale servings, check off ingredients, step-by-step **Cook Mode** with timers and screen-wake.
+3. **The Family** — private family groups, shared family cookbooks, recipe provenance ("Grandma Ruth's, since 1962"), stories and voice notes attached to recipes.
+4. **The Kitchen Graph** — likes, comments ("I made this!" with photo), saves, collections, follows, remixes ("forked from Mom's version, made it gluten-free").
+5. **The Magic** — AI features that feel like superpowers: snap a photo of a handwritten recipe card and it becomes a structured recipe; paste any recipe URL and import it; generate a shopping list from your week's saved posts.
+
+---
+
+## Part 3: Architecture Plan
+
+### Recommended stack (builds on what's already here)
+
+| Layer | Choice | Why |
+|---|---|---|
+| Framework | Next.js 15+ App Router (keep) | Already in place; server components are perfect for feed rendering |
+| Database | **PostgreSQL + Prisma** | Relational fits the social graph; Prisma gives type-safe queries end-to-end. Host on Neon/Supabase for zero-ops. |
+| Auth | **Auth.js (NextAuth v5)** | Free, self-owned, email + Google/Apple OAuth; families need real accounts |
+| Images/video | **UploadThing or Cloudinary + `next/image`** | Upload, transform (thumbnails, feed crops), and CDN delivery in one service |
+| Data fetching | Server Components + Server Actions; **TanStack Query** on interactive surfaces (feed infinite-scroll, optimistic likes) | Minimal client JS, snappy interactions |
+| Validation | **Zod** | Shared schemas between forms, server actions, and AI extraction output |
+| Search | Postgres full-text first; Typesense/Meilisearch when needed | Don't over-build early |
+| AI | **Claude API** (recipe-card OCR → structured recipe, URL import, ingredient parsing) | Vision + structured output is exactly this use case |
+| Deploy | Vercel (app) + Neon (db) | Push-to-deploy; keep Docker for local parity |
+| Testing/CI | Vitest + Playwright + GitHub Actions | Catch regressions before they hit the family |
+
+### Core data model
+
+```
+User ──< FamilyMember >── Family
+User ──< Recipe (author)          Family ──< Recipe (optional family attribution)
+Recipe ──< Ingredient (qty, unit, item, note, sortOrder)
+Recipe ──< Step (text, image?, timerSeconds?, sortOrder)
+Recipe ──< RecipeImage (url, width, height, isCover)
+Recipe ──< Recipe (forkedFromId — the "remix" lineage)
+Recipe: title, description, story, servings, prepMin, cookMin,
+        difficulty, cuisine, tags[], visibility (public|family|private),
+        provenance (originalAuthor, era, origin story)
+Post = a Recipe published to the feed (recipes can exist unpublished)
+User ──< Like >── Recipe        User ──< Comment >── Recipe (threaded)
+User ──< Save >── Recipe        Save ──> Collection ("Weeknight", "Holiday")
+User ──< Follow >── User        User ──< MadeIt >── Recipe (photo + rating + notes)
+Notification (like, comment, follow, family-invite, made-it)
+```
+
+Key decisions baked in:
+- **Ingredients and steps are structured rows, not a text blob** — this is what enables scaling servings, shopping lists, ingredient search, and AI features later. Non-negotiable from day one.
+- **Visibility on every recipe** (`public` / `family` / `private`) — the family-heirloom use case demands it, and it's brutal to retrofit.
+- **`forkedFromId`** — recipe lineage is the single most "incredible" social mechanic for a family recipe app: see how Aunt Linda's chili diverged from Grandma's.
+
+---
+
+## Part 4: The Phased Roadmap
+
+### Phase 0 — Foundations (1–2 weeks of effort)
+*Goal: a codebase you can build fast on.*
+
+- [ ] Upgrade React 19 RC → stable; align `@types/react*` to v19; DaisyUI 4 → 5
+- [ ] Node 22 base image; multi-stage production Dockerfile (`output: 'standalone'`)
+- [ ] Add Postgres to docker-compose; set up Prisma with the full schema above
+- [ ] `.env.example` + environment validation (Zod)
+- [ ] GitHub Actions CI: lint, typecheck, build, test on every PR
+- [ ] Vitest + one smoke Playwright test; Prettier config committed
+
+### Phase 1 — Recipes exist (2–3 weeks)
+*Goal: one user can create, photograph, and cook from a real recipe.*
+
+- [ ] Auth.js: email + Google sign-in; sessions; protected routes; real Login/Signup pages
+- [ ] Recipe CRUD with a multi-step create flow: photos → title/story → ingredients (structured editor) → steps → tags/visibility
+- [ ] Image upload with client-side crop (feed needs consistent 4:5 / 1:1 crops), CDN delivery, blur placeholders
+- [ ] Recipe detail page: hero image, story, ingredients with **serving scaler**, steps, print view
+- [ ] `/user-profile` becomes a real profile: avatar, bio, grid of your recipes (the "Instagram profile grid")
+- [ ] Seed script with ~30 gorgeous demo recipes so the app never looks empty
+
+**Milestone: you can post the first real Rasmussen family recipe.**
+
+### Phase 2 — The social feed (2–3 weeks)
+*Goal: it feels like Instagram.*
+
+- [ ] The Feed at `/` (when logged in): infinite scroll, cursor-paginated, photo-first cards (cover image, title, author, time, like/comment/save row)
+- [ ] Likes (optimistic, double-tap on photo ❤️), threaded comments, saves + collections
+- [ ] Follow system + follower/following counts; feed = followed users ∪ your families
+- [ ] **"I Made It"** posts — the killer engagement loop: cook it, snap your result, it appears on the recipe and in the feed
+- [ ] Notifications (in-app first): likes, comments, follows, made-its
+- [ ] Share links with Open Graph images (auto-generated recipe cards for iMessage/social previews)
+
+**Milestone: two people can follow each other and interact daily.**
+
+### Phase 3 — Families & heritage (2 weeks)
+*Goal: the moat. This is what no other app has.*
+
+- [ ] Family groups: create, invite via link/email, member roles (admin/member)
+- [ ] Family cookbook page: the family's collected recipes, filterable by member, holiday, era
+- [ ] Recipe provenance: "Originally by Grandma Ruth, ~1962, Ballard, WA" + origin story field
+- [ ] **Recipe lineage/remix**: fork a family recipe, show the family tree of variations
+- [ ] Voice notes on recipes ("listen to Grandpa explain the gravy")
+- [ ] Family-only visibility enforced everywhere (feed, search, profiles)
+- [ ] Printable/exportable family cookbook (PDF) — the holiday-gift feature
+
+**Milestone: the whole extended family joins and uploads the heirloom recipes.**
+
+### Phase 4 — Discovery & cooking experience (2–3 weeks)
+*Goal: it's not just social — it's the best app to actually cook from.*
+
+- [ ] Search: recipes by title, ingredient ("what can I make with leeks?"), tag, cuisine, author
+- [ ] Explore page: trending, seasonal, cuisine browsing (the Instagram Explore grid)
+- [ ] **Cook Mode**: full-screen step-by-step, huge type, screen stays awake, built-in timers per step, voice "next step"
+- [ ] Shopping list: add any recipe's ingredients (auto-scaled, auto-merged across recipes), check off at the store
+- [ ] Ratings via "Made It" (star + photo required = trustworthy ratings)
+
+### Phase 5 — The magic (AI) (2–3 weeks)
+*Goal: features that make people say "how did it do that?"*
+
+- [ ] **📸 Recipe card scanner**: photograph Grandma's handwritten index card → Claude vision extracts a fully structured recipe (with the original card image preserved on the recipe as an artifact). *This is the emotional killer feature for the family market.*
+- [ ] **🔗 URL import**: paste any recipe link → parsed into structured format (schema.org/Recipe JSON-LD first, LLM fallback)
+- [ ] Smart ingredient parsing ("2 heaping cups AP flour, sifted" → qty/unit/item/note)
+- [ ] Natural-language search ("cozy fall dinner under 45 minutes")
+- [ ] Weekly meal plan suggestions from your saves + auto shopping list
+
+### Phase 6 — Polish & scale (ongoing)
+
+- [ ] PWA: installable, offline-cached saved recipes (cook with no signal), push notifications
+- [ ] Video support: 30-second recipe reels in the feed
+- [ ] Performance budget: LCP < 2s on feed, image `sizes` tuned, edge caching
+- [ ] Accessibility pass (WCAG AA), dark mode polish, i18n groundwork
+- [ ] Moderation/reporting tooling before opening beyond family & friends
+- [ ] Analytics (PostHog) to learn what people actually cook
+
+---
+
+## Part 5: Priorities & Principles
+
+**Build order rationale:** Foundations → single-player value (a great recipe tool) → multiplayer value (feed) → moat (family) → delight (AI). Each phase ships something usable; the app is never broken-in-progress.
+
+**Three principles:**
+1. **Photo-first, always.** Every surface leads with imagery. If a recipe has no photo, the create flow makes adding one irresistible (and the card scanner means even old recipes get the original card as their image).
+2. **Structured data is sacred.** Never store ingredients/steps as text blobs. Every future feature — scaling, shopping lists, search, AI — depends on this.
+3. **The family is the moat.** Instagram has more photos; AllRecipes has more recipes. Nobody else has "your family's food history, alive and growing." Every roadmap decision should be tested against: *does this make the app more indispensable to a family?*
+
+**Suggested immediate next step:** Phase 0 in one PR (upgrades + Prisma schema + CI), then Phase 1 auth. Say the word and I'll start executing.
