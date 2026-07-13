@@ -9,7 +9,7 @@ const MESSAGES: Record<string, string> = {
   LIKE: 'liked your recipe',
   COMMENT: 'commented on your recipe',
   FOLLOW: 'started following you',
-  FAMILY_INVITE: 'invited you to a family group',
+  FAMILY_INVITE: 'joined your family group',
   MADE_IT: 'made your recipe',
 }
 

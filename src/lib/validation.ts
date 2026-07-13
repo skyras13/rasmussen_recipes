@@ -27,10 +27,20 @@ export const stepInputSchema = z.object({
   text: z.string().trim().min(1, 'Step text is required').max(2000),
 })
 
+export const familySchema = z.object({
+  name: z.string().trim().min(2, 'Family name is required').max(80),
+  about: z.string().trim().max(500).optional(),
+})
+
 export const recipeSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(120),
   description: z.string().trim().max(500).optional(),
   story: z.string().trim().max(5000).optional(),
+  originalAuthor: z.string().trim().max(80).optional(),
+  originEra: z.string().trim().max(40).optional(),
+  originPlace: z.string().trim().max(80).optional(),
+  familyId: z.string().trim().optional(),
+  forkedFromId: z.string().trim().optional(),
   servings: z.coerce.number().int().min(1).max(100),
   prepMin: z.coerce.number().int().min(0).max(6000).optional(),
   cookMin: z.coerce.number().int().min(0).max(6000).optional(),

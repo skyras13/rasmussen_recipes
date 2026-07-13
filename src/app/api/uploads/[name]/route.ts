@@ -8,6 +8,11 @@ const CONTENT_TYPES: Record<string, string> = {
   '.png': 'image/png',
   '.webp': 'image/webp',
   '.gif': 'image/gif',
+  '.mp3': 'audio/mpeg',
+  '.m4a': 'audio/mp4',
+  '.ogg': 'audio/ogg',
+  '.weba': 'audio/webm',
+  '.wav': 'audio/wav',
 }
 
 export async function GET(
@@ -18,7 +23,7 @@ export async function GET(
 
   // Uploaded names are always "<uuid><ext>"; anything else is rejected,
   // which also rules out path traversal.
-  if (!/^[0-9a-f-]{36}\.(jpg|png|webp|gif)$/.test(name)) {
+  if (!/^[0-9a-f-]{36}\.(jpg|png|webp|gif|mp3|m4a|ogg|weba|wav)$/.test(name)) {
     return new NextResponse('Not found', { status: 404 })
   }
 

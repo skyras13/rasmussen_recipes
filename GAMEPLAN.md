@@ -150,13 +150,13 @@ _Goal: it feels like Instagram._
 
 _Goal: the moat. This is what no other app has._
 
-- [ ] Family groups: create, invite via link/email, member roles (admin/member)
-- [ ] Family cookbook page: the family's collected recipes, filterable by member, holiday, era
-- [ ] Recipe provenance: "Originally by Grandma Ruth, ~1962, Ballard, WA" + origin story field
-- [ ] **Recipe lineage/remix**: fork a family recipe, show the family tree of variations
-- [ ] Voice notes on recipes ("listen to Grandpa explain the gravy")
-- [ ] Family-only visibility enforced everywhere (feed, search, profiles)
-- [ ] Printable/exportable family cookbook (PDF) — the holiday-gift feature
+- [x] Family groups: create, shareable invite links, admin/member roles, leave with last-admin guard (email invites still to do)
+- [x] Family cookbook page: the family's collected recipes, filterable by member and tag
+- [x] Recipe provenance: original cook, era, and place captured in the form and shown on recipes ("📜 Originally by Grandma Ruth · 1960s · Ballard, WA")
+- [x] **Recipe lineage/remix**: 🍴 Remix button prefills a new recipe from the original; both directions of the lineage render (remixed-from + variations)
+- [x] Voice notes on recipes: audio upload on the create form, player on the recipe page
+- [x] Family-only visibility enforced everywhere (feed, cookbook, profiles, detail)
+- [x] Printable family cookbook at `/families/[slug]/cookbook` — print or save as PDF from the browser (designed PDF export still to do)
 
 **Milestone: the whole extended family joins and uploads the heirloom recipes.**
 

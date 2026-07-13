@@ -3,9 +3,10 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { currentUserId } from '@/lib/auth'
+import { canViewRecipe } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 import { parseQuantity } from '@/lib/recipe-utils'
-import { saveUpload, UploadError } from '@/lib/uploads'
+import { saveAudioUpload, saveUpload, UploadError } from '@/lib/uploads'
 import { recipeSchema } from '@/lib/validation'
 
 export type RecipeFormState = { error: string | null }
@@ -44,6 +45,11 @@ export async function createRecipe(
     title: formData.get('title'),
     description: String(formData.get('description') ?? '') || undefined,
     story: String(formData.get('story') ?? '') || undefined,
+    originalAuthor: String(formData.get('originalAuthor') ?? '') || undefined,
+    originEra: String(formData.get('originEra') ?? '') || undefined,
+    originPlace: String(formData.get('originPlace') ?? '') || undefined,
+    familyId: String(formData.get('familyId') ?? '') || undefined,
+    forkedFromId: String(formData.get('forkedFromId') ?? '') || undefined,
     servings: formData.get('servings'),
     prepMin: String(formData.get('prepMin') ?? '') || undefined,
     cookMin: String(formData.get('cookMin') ?? '') || undefined,
@@ -59,13 +65,40 @@ export async function createRecipe(
   }
   const data = parsed.data
 
+  // Family attribution requires membership in that family.
+  if (data.familyId) {
+    const membership = await prisma.familyMember.findUnique({
+      where: {
+        userId_familyId: { userId, familyId: data.familyId },
+      },
+    })
+    if (!membership) return { error: 'You are not in that family group' }
+  }
+
+  // Forks must point at a recipe the author can actually see.
+  if (data.forkedFromId) {
+    const original = await prisma.recipe.findUnique({
+      where: { id: data.forkedFromId },
+      select: { visibility: true, authorId: true, familyId: true },
+    })
+    if (!original || !(await canViewRecipe(original, userId))) {
+      return { error: 'Original recipe not found' }
+    }
+  }
+
   const images = formData
     .getAll('images')
     .filter((entry): entry is File => entry instanceof File && entry.size > 0)
 
+  const voiceNote = formData.get('voiceNote')
+
   let imageUrls: string[]
+  let audioUrl: string | null = null
   try {
     imageUrls = await Promise.all(images.map((file) => saveUpload(file)))
+    if (voiceNote instanceof File && voiceNote.size > 0) {
+      audioUrl = await saveAudioUpload(voiceNote)
+    }
   } catch (error) {
     if (error instanceof UploadError) return { error: error.message }
     throw error
@@ -77,6 +110,12 @@ export async function createRecipe(
       title: data.title,
       description: data.description,
       story: data.story,
+      originalAuthor: data.originalAuthor,
+      originEra: data.originEra,
+      originPlace: data.originPlace,
+      familyId: data.familyId,
+      forkedFromId: data.forkedFromId,
+      audioUrl,
       servings: data.servings,
       prepMin: data.prepMin,
       cookMin: data.cookMin,

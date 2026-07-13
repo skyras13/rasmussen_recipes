@@ -5,6 +5,30 @@ import { createRecipe, type RecipeFormState } from '@/app/actions/recipes'
 
 type Row = { key: number }
 
+export type RecipeFormInitial = {
+  forkedFromId: string
+  forkedFromTitle: string
+  title: string
+  description: string
+  story: string
+  originalAuthor: string
+  originEra: string
+  originPlace: string
+  servings: number
+  prepMin: number | null
+  cookMin: number | null
+  difficulty: 'EASY' | 'MEDIUM' | 'HARD'
+  cuisine: string
+  tags: string
+  ingredients: Array<{
+    quantity: string
+    unit: string
+    item: string
+    note: string
+  }>
+  steps: string[]
+}
+
 function useRows(initial: number) {
   const [rows, setRows] = useState<Row[]>(() =>
     Array.from({ length: initial }, (_, i) => ({ key: i })),
@@ -25,13 +49,19 @@ function useRows(initial: number) {
 
 const initialState: RecipeFormState = { error: null }
 
-export default function RecipeForm() {
+export default function RecipeForm({
+  families = [],
+  initial,
+}: {
+  families?: Array<{ id: string; name: string }>
+  initial?: RecipeFormInitial
+}) {
   const [state, formAction, pending] = useActionState(
     createRecipe,
     initialState,
   )
-  const ingredients = useRows(3)
-  const steps = useRows(2)
+  const ingredients = useRows(initial?.ingredients.length ?? 3)
+  const steps = useRows(initial?.steps.length ?? 2)
 
   return (
     <form action={formAction} className='space-y-8'>
@@ -39,6 +69,18 @@ export default function RecipeForm() {
         <div role='alert' className='alert alert-error'>
           {state.error}
         </div>
+      )}
+
+      {initial && (
+        <div className='alert alert-info'>
+          <span>
+            Remixing <strong>{initial.forkedFromTitle}</strong> — tweak anything
+            and publish your own version. The lineage stays linked.
+          </span>
+        </div>
+      )}
+      {initial && (
+        <input type='hidden' name='forkedFromId' value={initial.forkedFromId} />
       )}
 
       <section className='space-y-4'>
@@ -49,6 +91,7 @@ export default function RecipeForm() {
             name='title'
             required
             maxLength={120}
+            defaultValue={initial?.title}
             placeholder="Grandma Ruth's Æbleskiver"
             className='input input-bordered w-full'
           />
@@ -58,6 +101,7 @@ export default function RecipeForm() {
           <input
             name='description'
             maxLength={500}
+            defaultValue={initial?.description}
             placeholder='Fluffy Danish pancake balls, best with lingonberry jam'
             className='input input-bordered w-full'
           />
@@ -68,6 +112,7 @@ export default function RecipeForm() {
             name='story'
             rows={3}
             maxLength={5000}
+            defaultValue={initial?.story}
             placeholder='Where did this recipe come from? Who made it first?'
             className='textarea textarea-bordered w-full'
           />
@@ -80,7 +125,7 @@ export default function RecipeForm() {
               type='number'
               min={1}
               max={100}
-              defaultValue={4}
+              defaultValue={initial?.servings ?? 4}
               required
               className='input input-bordered'
             />
@@ -91,6 +136,7 @@ export default function RecipeForm() {
               name='prepMin'
               type='number'
               min={0}
+              defaultValue={initial?.prepMin ?? undefined}
               className='input input-bordered'
             />
           </label>
@@ -100,6 +146,7 @@ export default function RecipeForm() {
               name='cookMin'
               type='number'
               min={0}
+              defaultValue={initial?.cookMin ?? undefined}
               className='input input-bordered'
             />
           </label>
@@ -107,7 +154,7 @@ export default function RecipeForm() {
             <span className='label-text mb-1'>Difficulty</span>
             <select
               name='difficulty'
-              defaultValue='MEDIUM'
+              defaultValue={initial?.difficulty ?? 'MEDIUM'}
               className='select select-bordered'
             >
               <option value='EASY'>Easy</option>
@@ -122,6 +169,7 @@ export default function RecipeForm() {
             <input
               name='cuisine'
               maxLength={60}
+              defaultValue={initial?.cuisine}
               placeholder='Danish'
               className='input input-bordered'
             />
@@ -130,11 +178,80 @@ export default function RecipeForm() {
             <span className='label-text mb-1'>Tags (comma separated)</span>
             <input
               name='tags'
+              defaultValue={initial?.tags}
               placeholder='breakfast, holiday, heirloom'
               className='input input-bordered'
             />
           </label>
         </div>
+      </section>
+
+      <section className='space-y-4'>
+        <h2 className='text-lg font-semibold'>Heritage</h2>
+        <p className='text-sm text-base-content/60 -mt-2'>
+          Where does this recipe really come from? Optional, but this is what
+          your grandkids will want to know.
+        </p>
+        <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+          <label className='form-control'>
+            <span className='label-text mb-1'>Original cook</span>
+            <input
+              name='originalAuthor'
+              maxLength={80}
+              defaultValue={initial?.originalAuthor}
+              placeholder='Grandma Ruth'
+              className='input input-bordered'
+            />
+          </label>
+          <label className='form-control'>
+            <span className='label-text mb-1'>Era</span>
+            <input
+              name='originEra'
+              maxLength={40}
+              defaultValue={initial?.originEra}
+              placeholder='1960s'
+              className='input input-bordered'
+            />
+          </label>
+          <label className='form-control'>
+            <span className='label-text mb-1'>Place</span>
+            <input
+              name='originPlace'
+              maxLength={80}
+              defaultValue={initial?.originPlace}
+              placeholder='Ballard, WA'
+              className='input input-bordered'
+            />
+          </label>
+        </div>
+        {families.length > 0 && (
+          <label className='form-control w-full max-w-xs'>
+            <span className='label-text mb-1'>Family cookbook</span>
+            <select
+              name='familyId'
+              defaultValue=''
+              className='select select-bordered'
+            >
+              <option value=''>Not part of a family cookbook</option>
+              {families.map((family) => (
+                <option key={family.id} value={family.id}>
+                  {family.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <label className='form-control w-full'>
+          <span className='label-text mb-1'>
+            Voice note — someone telling the story or the technique
+          </span>
+          <input
+            name='voiceNote'
+            type='file'
+            accept='audio/mpeg,audio/mp4,audio/x-m4a,audio/ogg,audio/webm,audio/wav'
+            className='file-input file-input-bordered w-full'
+          />
+        </label>
       </section>
 
       <section className='space-y-3'>
@@ -158,24 +275,28 @@ export default function RecipeForm() {
             <input
               name='ingredient-quantity'
               placeholder='1 1/2'
+              defaultValue={initial?.ingredients[row.key]?.quantity}
               aria-label={`Ingredient ${i + 1} quantity`}
               className='input input-bordered w-20'
             />
             <input
               name='ingredient-unit'
               placeholder='cups'
+              defaultValue={initial?.ingredients[row.key]?.unit}
               aria-label={`Ingredient ${i + 1} unit`}
               className='input input-bordered w-24'
             />
             <input
               name='ingredient-item'
               placeholder='all-purpose flour'
+              defaultValue={initial?.ingredients[row.key]?.item}
               aria-label={`Ingredient ${i + 1} name`}
               className='input input-bordered flex-1'
             />
             <input
               name='ingredient-note'
               placeholder='sifted'
+              defaultValue={initial?.ingredients[row.key]?.note}
               aria-label={`Ingredient ${i + 1} note`}
               className='input input-bordered w-28 hidden md:block'
             />
@@ -207,6 +328,7 @@ export default function RecipeForm() {
               name='step-text'
               rows={2}
               placeholder='Whisk the dry ingredients together…'
+              defaultValue={initial?.steps[row.key]}
               aria-label={`Step ${i + 1}`}
               className='textarea textarea-bordered flex-1'
             />

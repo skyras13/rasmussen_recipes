@@ -71,6 +71,8 @@ model Family {
   slug      String   @unique
   about     String?
   coverUrl  String?
+  // Shareable join-link token; anyone with it can become a MEMBER.
+  inviteCode String  @unique @default(cuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -110,6 +112,8 @@ model Recipe {
   cuisine    String?
   tags       String[]   @default([])
   visibility Visibility @default(PRIVATE)
+  // Voice note: a family member telling the story or technique out loud.
+  audioUrl     String?
   publishedAt  DateTime?
   forkedFromId String?
   createdAt    DateTime  @default(now())

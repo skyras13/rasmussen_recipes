@@ -46,6 +46,22 @@ export default async function RecipePage({ params }: Params) {
     where: { id },
     include: {
       author: { select: { id: true, name: true, username: true } },
+      family: { select: { name: true, slug: true } },
+      forkedFrom: {
+        select: {
+          id: true,
+          title: true,
+          author: { select: { name: true } },
+        },
+      },
+      forks: {
+        where: { publishedAt: { not: null }, visibility: 'PUBLIC' },
+        select: {
+          id: true,
+          title: true,
+          author: { select: { name: true } },
+        },
+      },
       ingredients: { orderBy: { sortOrder: 'asc' } },
       steps: { orderBy: { sortOrder: 'asc' } },
       images: { orderBy: [{ isCover: 'desc' }, { createdAt: 'asc' }] },
@@ -116,7 +132,38 @@ export default async function RecipePage({ params }: Params) {
           >
             {recipe.author.name} (@{recipe.author.username})
           </Link>
+          {recipe.family && (
+            <>
+              {' · '}
+              <Link
+                href={`/families/${recipe.family.slug}`}
+                className='hover:underline'
+              >
+                {recipe.family.name} cookbook
+              </Link>
+            </>
+          )}
         </p>
+        {recipe.originalAuthor && (
+          <p className='text-base-content/70 mt-1'>
+            <span aria-hidden>📜</span> Originally by{' '}
+            <span className='font-medium'>{recipe.originalAuthor}</span>
+            {recipe.originEra && <> · {recipe.originEra}</>}
+            {recipe.originPlace && <> · {recipe.originPlace}</>}
+          </p>
+        )}
+        {recipe.forkedFrom && (
+          <p className='text-base-content/70 mt-1'>
+            <span aria-hidden>🍴</span> Remixed from{' '}
+            <Link
+              href={`/recipes/${recipe.forkedFrom.id}`}
+              className='link link-primary'
+            >
+              {recipe.forkedFrom.title}
+            </Link>{' '}
+            by {recipe.forkedFrom.author.name}
+          </p>
+        )}
         {recipe.description && (
           <p className='mt-3 text-lg'>{recipe.description}</p>
         )}
@@ -147,7 +194,7 @@ export default async function RecipePage({ params }: Params) {
           ))}
         </div>
         {userId && (
-          <div className='flex items-center gap-2 mt-4'>
+          <div className='flex flex-wrap items-center gap-2 mt-4'>
             <LikeButton
               recipeId={recipe.id}
               initialLiked={recipe.likes.length > 0}
@@ -157,10 +204,30 @@ export default async function RecipePage({ params }: Params) {
               recipeId={recipe.id}
               initialSaved={recipe.saves.length > 0}
             />
+            <Link
+              href={`/recipes/new?fork=${recipe.id}`}
+              className='btn btn-ghost btn-sm'
+            >
+              🍴 Remix
+            </Link>
             <MadeItForm recipeId={recipe.id} />
           </div>
         )}
       </header>
+
+      {recipe.audioUrl && (
+        <section className='mb-8 p-4 bg-base-200 rounded-box'>
+          <h2 className='text-sm font-semibold uppercase tracking-wide text-base-content/60 mb-2'>
+            🎙 Voice note
+          </h2>
+          <audio
+            controls
+            preload='none'
+            src={recipe.audioUrl}
+            className='w-full'
+          />
+        </section>
+      )}
 
       {recipe.story && (
         <section className='mb-8 p-4 bg-base-200 rounded-box'>
@@ -206,6 +273,30 @@ export default async function RecipePage({ params }: Params) {
               />
             ))}
           </div>
+        </section>
+      )}
+
+      {recipe.forks.length > 0 && (
+        <section className='mt-10'>
+          <h2 className='text-xl font-semibold mb-4'>
+            Variations ({recipe.forks.length})
+          </h2>
+          <ul className='space-y-1'>
+            {recipe.forks.map((fork) => (
+              <li key={fork.id}>
+                🍴{' '}
+                <Link
+                  href={`/recipes/${fork.id}`}
+                  className='link link-primary'
+                >
+                  {fork.title}
+                </Link>{' '}
+                <span className='text-base-content/60'>
+                  by {fork.author.name}
+                </span>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
