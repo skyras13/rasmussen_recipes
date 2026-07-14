@@ -90,6 +90,14 @@ export async function createRecipe(
     .getAll('images')
     .filter((entry): entry is File => entry instanceof File && entry.size > 0)
 
+  // Scanned recipe card (already uploaded by the scan action). Only our own
+  // uploads route is accepted, so arbitrary URLs can't be attached.
+  const originalCardUrl = String(formData.get('originalCardUrl') ?? '')
+  const validCardUrl =
+    /^\/api\/uploads\/[0-9a-f-]{36}\.(jpg|png|webp|gif)$/.test(originalCardUrl)
+      ? originalCardUrl
+      : null
+
   const voiceNote = formData.get('voiceNote')
 
   let imageUrls: string[]
@@ -140,7 +148,18 @@ export async function createRecipe(
         })),
       },
       images: {
-        create: imageUrls.map((url, i) => ({ url, isCover: i === 0 })),
+        create: [
+          ...imageUrls.map((url, i) => ({ url, isCover: i === 0 })),
+          ...(validCardUrl
+            ? [
+                {
+                  url: validCardUrl,
+                  isCover: imageUrls.length === 0,
+                  isOriginalCard: true,
+                },
+              ]
+            : []),
+        ],
       },
     },
     select: { id: true },

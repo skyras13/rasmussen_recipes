@@ -81,6 +81,14 @@ export async function addRecipeToShoppingList(
   return recipe.ingredients.length
 }
 
+/** Meal plan helper: add several recipes' ingredients in one go. */
+export async function addRecipesToShoppingList(recipeIds: string[]) {
+  for (const recipeId of recipeIds.slice(0, 10)) {
+    await addRecipeToShoppingList(recipeId, NaN)
+  }
+  redirect('/shopping')
+}
+
 export async function toggleShoppingItem(itemId: string) {
   const userId = await currentUserId()
   if (!userId) redirect('/login')

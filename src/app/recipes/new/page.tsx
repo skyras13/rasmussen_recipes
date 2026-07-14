@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import RecipeForm, { type RecipeFormInitial } from '@/components/RecipeForm'
 import { auth } from '@/lib/auth'
@@ -62,9 +63,21 @@ export default async function NewRecipe({
 
   return (
     <div className='container mx-auto p-4 max-w-3xl'>
-      <h1 className='text-4xl font-bold mb-6'>
-        {initial ? 'Remix recipe' : 'New recipe'}
-      </h1>
+      <div className='flex flex-wrap items-center gap-3 mb-6'>
+        <h1 className='text-4xl font-bold flex-1'>
+          {initial ? 'Remix recipe' : 'New recipe'}
+        </h1>
+        {!initial && (
+          <>
+            <Link href='/recipes/import' className='btn btn-outline btn-sm'>
+              🔗 Import from URL
+            </Link>
+            <Link href='/recipes/scan' className='btn btn-outline btn-sm'>
+              📸 Scan a card
+            </Link>
+          </>
+        )}
+      </div>
       <RecipeForm families={families} initial={initial} />
     </div>
   )

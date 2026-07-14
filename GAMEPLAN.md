@@ -174,20 +174,20 @@ _Goal: it's not just social — it's the best app to actually cook from._
 
 _Goal: features that make people say "how did it do that?"_
 
-- [ ] **📸 Recipe card scanner**: photograph Grandma's handwritten index card → Claude vision extracts a fully structured recipe (with the original card image preserved on the recipe as an artifact). _This is the emotional killer feature for the family market._
-- [ ] **🔗 URL import**: paste any recipe link → parsed into structured format (schema.org/Recipe JSON-LD first, LLM fallback)
-- [ ] Smart ingredient parsing ("2 heaping cups AP flour, sifted" → qty/unit/item/note)
-- [ ] Natural-language search ("cozy fall dinner under 45 minutes")
-- [ ] Weekly meal plan suggestions from your saves + auto shopping list
+All AI features activate when `ANTHROPIC_API_KEY` is configured and degrade gracefully without it.
+
+- [x] **📸 Recipe card scanner** at `/recipes/scan`: photograph Grandma's handwritten index card → Claude vision (structured outputs) extracts a fully structured recipe, with the original card image preserved on the recipe as an heirloom artifact. Shows a clear "not configured" state without a key.
+- [x] **🔗 URL import** at `/recipes/import`: paste any recipe link → schema.org/Recipe JSON-LD parses instantly with no AI; pages without it fall back to Claude extraction (SSRF-guarded fetcher)
+- [x] Smart ingredient parsing ("2 heaping cups AP flour, sifted" → qty/unit/item/note) — rule-based, used by import and AI post-processing
+- [x] Natural-language search ("cozy fall dinner under 45 minutes") — AI-gated query interpretation on Explore with plain-search fallback
+- [x] Weekly meal plan at `/meal-plan` from your saves (topped up with trending), rotating weekly, with one-tap "add the week to my shopping list"
 
 ### Phase 6 — Polish & scale (ongoing)
 
-- [ ] PWA: installable, offline-cached saved recipes (cook with no signal), push notifications
-- [ ] Video support: 30-second recipe reels in the feed
-- [ ] Performance budget: LCP < 2s on feed, image `sizes` tuned, edge caching
-- [ ] Accessibility pass (WCAG AA), dark mode polish, i18n groundwork
-- [ ] Moderation/reporting tooling before opening beyond family & friends
-- [ ] Analytics (PostHog) to learn what people actually cook
+- [x] PWA: installable (manifest + icons), service worker with offline fallback and cached assets/images (push notifications deferred — needs a push service)
+- [x] Performance: lazy-loaded grid/feed images, immutable caching on uploads, standalone output (formal LCP budget + edge caching deferred to hosting setup)
+- [x] Accessibility & dark mode: labeled controls throughout, keyboard-navigable Cook Mode, DaisyUI dark theme via `prefers-color-scheme` (formal WCAG audit + i18n deferred)
+- [ ] _Deferred — needs external services/decisions:_ video reels (video hosting), moderation/reporting tooling (before opening beyond family & friends), analytics (PostHog account)
 
 ---
 

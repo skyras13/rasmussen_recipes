@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { aiEnabled, interpretSearchQuery } from '@/lib/ai'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import RecipeCard, { type RecipeCardData } from '@/components/RecipeCard'
@@ -48,38 +49,57 @@ export default async function Explore({
     publishedAt: { not: null },
   }
 
-  // Search spans titles, descriptions, tags, cuisines, ingredients, and
-  // authors — "what can I make with leeks?" is just q=leeks.
-  const where: Prisma.RecipeWhereInput = {
-    ...visible,
-    ...(cuisine ? { cuisine: { equals: cuisine, mode: 'insensitive' } } : {}),
-    ...(tag ? { tags: { has: tag } } : {}),
-    ...(query
-      ? {
-          OR: [
-            { title: { contains: query, mode: 'insensitive' } },
-            { description: { contains: query, mode: 'insensitive' } },
-            { cuisine: { contains: query, mode: 'insensitive' } },
-            { tags: { has: query.toLowerCase() } },
-            {
-              ingredients: {
-                some: { item: { contains: query, mode: 'insensitive' } },
-              },
-            },
-            {
-              author: {
-                OR: [
-                  { name: { contains: query, mode: 'insensitive' } },
-                  { username: { contains: query, mode: 'insensitive' } },
-                ],
-              },
-            },
-          ],
-        }
-      : {}),
+  // Natural-language search (AI-gated): "cozy fall dinner under 45 minutes"
+  // becomes concrete terms + filters. Falls back to the literal query.
+  let searchTerms = query ? [query] : []
+  let aiCuisine: string | null = null
+  let maxTotalMin: number | null = null
+  if (query && query.split(' ').length >= 3 && aiEnabled()) {
+    try {
+      const intent = await interpretSearchQuery(query)
+      if (intent.terms.length > 0) searchTerms = intent.terms.slice(0, 3)
+      aiCuisine = intent.cuisine || null
+      maxTotalMin = intent.maxTotalMin
+    } catch {
+      // Plain search is always a fine answer.
+    }
   }
 
-  const [recipes, cuisines, tagRows, trending] = await Promise.all([
+  const termClause = (term: string): Prisma.RecipeWhereInput => ({
+    OR: [
+      { title: { contains: term, mode: 'insensitive' } },
+      { description: { contains: term, mode: 'insensitive' } },
+      { cuisine: { contains: term, mode: 'insensitive' } },
+      { tags: { has: term.toLowerCase() } },
+      {
+        ingredients: {
+          some: { item: { contains: term, mode: 'insensitive' } },
+        },
+      },
+      {
+        author: {
+          OR: [
+            { name: { contains: term, mode: 'insensitive' } },
+            { username: { contains: term, mode: 'insensitive' } },
+          ],
+        },
+      },
+    ],
+  })
+
+  // Search spans titles, descriptions, tags, cuisines, ingredients, and
+  // authors — "what can I make with leeks?" is just q=leeks.
+  const effectiveCuisine = cuisine ?? aiCuisine
+  const where: Prisma.RecipeWhereInput = {
+    ...visible,
+    ...(effectiveCuisine
+      ? { cuisine: { equals: effectiveCuisine, mode: 'insensitive' } }
+      : {}),
+    ...(tag ? { tags: { has: tag } } : {}),
+    ...(searchTerms.length > 0 ? { OR: searchTerms.map(termClause) } : {}),
+  }
+
+  const [fetched, cuisines, tagRows, trending] = await Promise.all([
     prisma.recipe.findMany({
       where,
       orderBy: { publishedAt: 'desc' },
@@ -103,6 +123,14 @@ export default async function Explore({
           include: CARD_INCLUDE,
         }),
   ])
+
+  // AI time filter ("under 45 minutes") applies to total prep + cook time.
+  const recipes = maxTotalMin
+    ? fetched.filter(
+        (recipe) =>
+          (recipe.prepMin ?? 0) + (recipe.cookMin ?? 0) <= maxTotalMin,
+      )
+    : fetched
 
   const allTags = [...new Set(tagRows.flatMap((row) => row.tags))]
     .sort()

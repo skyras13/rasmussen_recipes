@@ -40,6 +40,7 @@ export default function RecipeCard({
           <img
             src={recipe.coverUrl}
             alt={recipe.title}
+            loading='lazy'
             className='h-full w-full object-cover'
           />
         ) : (

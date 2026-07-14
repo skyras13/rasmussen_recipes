@@ -81,6 +81,7 @@ export default function FeedPostCard({ post }: { post: FeedPost }) {
               src={post.coverUrl}
               alt={post.title}
               draggable={false}
+              loading='lazy'
               className='aspect-square w-full object-cover'
             />
           ) : (

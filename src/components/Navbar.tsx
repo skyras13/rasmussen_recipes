@@ -117,6 +117,9 @@ export default async function Navbar() {
                   <Link href='/shopping'>Shopping list</Link>
                 </li>
                 <li>
+                  <Link href='/meal-plan'>Meal plan</Link>
+                </li>
+                <li>
                   <Link href='/notifications'>Notifications</Link>
                 </li>
                 <li>

@@ -6,8 +6,12 @@ import { createRecipe, type RecipeFormState } from '@/app/actions/recipes'
 type Row = { key: number }
 
 export type RecipeFormInitial = {
-  forkedFromId: string
-  forkedFromTitle: string
+  forkedFromId?: string
+  forkedFromTitle?: string
+  // Set by the card scanner: the uploaded photo of the original recipe
+  // card, preserved on the recipe as an heirloom artifact.
+  originalCardUrl?: string
+  banner?: string
   title: string
   description: string
   story: string
@@ -71,7 +75,7 @@ export default function RecipeForm({
         </div>
       )}
 
-      {initial && (
+      {initial?.forkedFromTitle && (
         <div className='alert alert-info'>
           <span>
             Remixing <strong>{initial.forkedFromTitle}</strong> — tweak anything
@@ -79,8 +83,33 @@ export default function RecipeForm({
           </span>
         </div>
       )}
-      {initial && (
+      {initial?.banner && (
+        <div className='alert alert-info'>
+          <span>{initial.banner}</span>
+        </div>
+      )}
+      {initial?.forkedFromId && (
         <input type='hidden' name='forkedFromId' value={initial.forkedFromId} />
+      )}
+      {initial?.originalCardUrl && (
+        <>
+          <input
+            type='hidden'
+            name='originalCardUrl'
+            value={initial.originalCardUrl}
+          />
+          <figure className='max-w-xs'>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={initial.originalCardUrl}
+              alt='Scanned recipe card'
+              className='rounded-box border border-base-300'
+            />
+            <figcaption className='text-xs text-base-content/60 mt-1'>
+              The original card will be kept on the recipe.
+            </figcaption>
+          </figure>
+        </>
       )}
 
       <section className='space-y-4'>
